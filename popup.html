@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 320px;
+      padding: 10px;
+      font-family: Arial, sans-serif;
+    }
+    button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 10px;
+      background: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #3b78e7;
+    }
+    .progress {
+      margin-top: 15px;
+      display: none;
+    }
+    #progressBar {
+      width: 100%;
+      background-color: #f1f1f1;
+      border-radius: 4px;
+      height: 20px;
+    }
+    #progressValue {
+      height: 20px;
+      background-color: #4CAF50;
+      border-radius: 4px;
+      width: 0%;
+      text-align: center;
+      line-height: 20px;
+      color: white;
+    }
+    #status {
+      margin-top: 5px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h3>Next.js SourceMap Extractor</h3>
+  
+  <div>
+    <input type="checkbox" id="includeSourcemaps" checked>
+    <label for="includeSourcemaps">Include sourcemap files</label>
+  </div>
+  
+  <button id="extractButton">Extract and download all Next.js files</button>
+  
+  <div class="progress" id="progressContainer">
+    <div id="progressBar">
+      <div id="progressValue">0%</div>
+    </div>
+    <div id="status">Preparing...</div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
