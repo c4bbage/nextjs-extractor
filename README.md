@@ -22,7 +22,7 @@ A Chrome extension that extracts JavaScript files and their corresponding source
 5. Select the `nextjs-extractor` directory
 
 ## Usage
-
+![doc/image.png]
 1. Visit any website built with Next.js
 2. Click the extension icon in your browser toolbar
 3. Check or uncheck "Include sourcemap files" as needed
