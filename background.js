@@ -10,6 +10,19 @@ try {
   console.error('Failed to load JSZip:', e);
 }
 
+// 设置默认图标
+chrome.runtime.onInstalled.addListener(() => {
+  console.log('Extension installed');
+  updateBadge('?');
+});
+
+// 监听标签页更新，重置图标
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') {
+    updateBadge('?', tabId);
+  }
+});
+
 // 监听消息
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
   console.log('Background received message:', message.type, sender?.tab?.id);
@@ -37,7 +50,219 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     sendResponse({status: 'processing'});
     return true; // 保持通道开放
   }
+  
+  // 处理框架检测请求
+  if (message.type === 'detect_framework_in_page') {
+    const tabId = sender.tab?.id;
+    if (tabId) {
+      console.log('Executing framework detection in tab:', tabId);
+      
+      // 使用executeScript在页面上下文中执行检测代码
+      chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        function: detectFrameworkInPage
+      })
+      .then((results) => {
+        if (results && results[0] && results[0].result) {
+          const detectionResult = results[0].result;
+          console.log('Framework detection result:', detectionResult);
+          
+          // 立即更新扩展图标
+          const framework = detectionResult.framework || 'unknown';
+          updateBadge(getFrameworkBadge(framework), tabId);
+          
+          // 保存检测结果到storage以便popup打开时可以获取
+          chrome.storage.local.set({
+            [`framework_${tabId}`]: detectionResult
+          }, function() {
+            console.log('Framework detection result saved for tab:', tabId);
+          });
+          
+          // 将结果发送回content script
+          chrome.tabs.sendMessage(tabId, {
+            type: 'framework_detection_result',
+            result: detectionResult
+          }, function(response) {
+            if (chrome.runtime.lastError) {
+              console.error('Error sending detection result to content script:', chrome.runtime.lastError);
+            } else {
+              console.log('Detection result sent to content script:', response);
+            }
+          });
+        }
+      })
+      .catch((error) => {
+        console.error('Error executing script:', error);
+        // 发送错误消息回content script
+        chrome.tabs.sendMessage(tabId, {
+          type: 'framework_detection_result', 
+          result: { error: error.message || 'Failed to execute detection script' }
+        });
+      });
+    }
+    sendResponse({status: 'detecting'});
+    return true;
+  }
+  
+  // 处理框架检测结果，更新扩展图标
+  if (message.type === 'framework_detected' && message.result) {
+    const tabId = sender.tab?.id;
+    if (tabId) {
+      const framework = message.result.framework || 'unknown';
+      updateBadge(getFrameworkBadge(framework), tabId);
+    }
+    sendResponse({status: 'badge_updated'});
+    return true;
+  }
 });
+
+// 在页面上下文中检测框架的函数
+function detectFrameworkInPage() {
+  const result = {
+    framework: null,
+    router: null
+  };
+  
+  try {
+    // 检测 Next.js
+    if (typeof window.__NEXT_DATA__ !== 'undefined') {
+      result.framework = 'nextjs';
+      // 尝试提取 Next.js 的路由信息
+      try {
+        if (window.__NEXT_DATA__.buildId && window.__NEXT_DATA__.page) {
+          result.router = {
+            buildId: window.__NEXT_DATA__.buildId,
+            currentPage: window.__NEXT_DATA__.page,
+            pages: window.__NEXT_DATA__.pages || []
+          };
+        }
+      } catch (e) {
+        console.error('Error extracting Next.js router info:', e);
+      }
+      return result;
+    }
+    
+    // 检测 Next.js 方法2: 检查特定的 meta 和 script 标签
+    if (!!document.querySelector('meta[name="next-head"]')) {
+      result.framework = 'nextjs';
+      return result;
+    }
+    
+    const nextScripts = Array.from(document.querySelectorAll('script[src^="/_next/"]'));
+    if (nextScripts.length > 0) {
+      result.framework = 'nextjs';
+      return result;
+    }
+    
+    // 检测 Vue
+    // 方法1: 检查全局变量
+    if (typeof window.__VUE__ !== 'undefined' || typeof window.Vue !== 'undefined') {
+      result.framework = 'vue';
+      // 尝试获取Vue路由信息会在这里添加
+      // 简化处理，不提取路由以避免复杂性
+      return result;
+    }
+    
+    // 方法2: 检查DOM元素上的 __vue__ 或 __vue_app__
+    const vueElements = document.querySelectorAll('*');
+    for (const el of vueElements) {
+      if (el.__vue__ || el.__vue_app__) {
+        result.framework = 'vue';
+        return result;
+      }
+    }
+    
+    // 检测 React (如果没有检测到 Next.js)
+    // 方法1: 检查 React 相关的全局变量
+    if (typeof window.__REACT__ !== 'undefined' || 
+        typeof window.React !== 'undefined' || 
+        typeof window.__REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined') {
+      result.framework = 'react';
+      return result;
+    }
+    
+    // 方法2: 检查 DOM 元素上的 React 属性
+    const rootElement = document.getElementById('root') || document.querySelector('*');
+    if (rootElement) {
+      for (const key in rootElement) {
+        if (key.startsWith('__react') || key.startsWith('__reactFiber$')) {
+          result.framework = 'react';
+          return result;
+        }
+      }
+    }
+    
+    // 检测 Angular
+    if (window.angular || window.ng) {
+      result.framework = 'angular';
+      return result;
+    }
+    
+    if (document && document.querySelector('[ng-version]')) {
+      result.framework = 'angular';
+      return result;
+    }
+  } catch (e) {
+    console.error('Framework detection error:', e);
+  }
+  
+  return result;
+}
+
+// 获取框架对应的标识
+function getFrameworkBadge(framework) {
+  switch (framework) {
+    case 'vue':
+      return 'Vue';
+    case 'react':
+      return 'R';
+    case 'nextjs':
+      return 'N.js';
+    case 'angular':
+      return 'Ang';
+    default:
+      return '?';
+  }
+}
+
+// 更新扩展图标上的徽章
+function updateBadge(text, tabId = null) {
+  const action = {
+    text: { text }
+  };
+  
+  // 设置徽章文本
+  if (tabId) {
+    chrome.action.setBadgeText({...action.text, tabId});
+  } else {
+    chrome.action.setBadgeText(action.text);
+  }
+  
+  // 根据框架类型设置徽章颜色
+  let color = '#888888'; // 默认灰色
+  
+  switch (text) {
+    case 'Vue':
+      color = '#42b883'; // Vue绿色
+      break;
+    case 'R':
+      color = '#61dafb'; // React蓝色
+      break;
+    case 'N.js':
+      color = '#000000'; // Next.js黑色
+      break;
+    case 'Ang':
+      color = '#dd0031'; // Angular红色
+      break;
+  }
+  
+  // 设置徽章背景色
+  if (tabId) {
+    chrome.action.setBadgeBackgroundColor({color, tabId});
+  } else {
+    chrome.action.setBadgeBackgroundColor({color});
+  }
+}
 
 // 创建并下载ZIP文件
 async function createAndDownloadZip(files, siteName) {

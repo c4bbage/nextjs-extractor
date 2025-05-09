@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Next.js SourceMap Extractor",
+  "name": "Web Framework Detector & Next.js Extractor",
   "version": "1.0",
-  "description": "Extract Next.js website JS and sourcemap files, preserving directory structure",
+  "description": "Detects web frameworks (Vue, React, Next.js, Angular), extracts router information, and downloads Next.js source files with sourcemaps.",
   "permissions": [
     "activeTab",
     "scripting",

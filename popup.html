@@ -44,10 +44,75 @@
       margin-top: 5px;
       font-size: 14px;
     }
+    #frameworkInfo {
+      margin-top: 10px;
+      border: 1px solid #eee;
+      padding: 10px;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+    }
+    .framework-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 3px;
+      color: white;
+      font-weight: bold;
+      margin-right: 5px;
+    }
+    .vue-badge {
+      background-color: #42b883;
+    }
+    .react-badge {
+      background-color: #61dafb;
+      color: #000;
+    }
+    .nextjs-badge {
+      background-color: #000;
+    }
+    .angular-badge {
+      background-color: #dd0031;
+    }
+    .unknown-badge {
+      background-color: #999;
+    }
+    .router-container {
+      margin-top: 10px;
+      display: none;
+    }
+    .router-toggle {
+      cursor: pointer;
+      user-select: none;
+      color: #4285f4;
+    }
+    .router-content {
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+      padding: 8px;
+      margin-top: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      display: none;
+    }
+    .path-item {
+      margin-bottom: 4px;
+      padding-bottom: 4px;
+      border-bottom: 1px dashed #eee;
+    }
   </style>
 </head>
 <body>
   <h3>Next.js SourceMap Extractor</h3>
+  
+  <div id="frameworkInfo">
+    <div>检测框架: <span id="detectedFramework">检测中...</span></div>
+    <div class="router-container" id="routerContainer">
+      <div class="router-toggle" id="routerToggle">路由信息 ▶</div>
+      <div class="router-content" id="routerContent"></div>
+    </div>
+  </div>
   
   <div>
     <input type="checkbox" id="includeSourcemaps" checked>
